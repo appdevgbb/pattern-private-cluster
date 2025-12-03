@@ -1,18 +1,5 @@
 /* 
  * Module variables for the AKS module.
- * 
- * Variables:
- * - prefix: The prefix to use for all resources created by this module.
- * - suffix: The suffix to use for all resources created by this module.
- * - cluster_name: The name of the AKS cluster.
- * - uid: The unique identifier for the AKS cluster.
- * - subnet_id: The ID of the subnet where the AKS cluster will be deployed.
- * - acr_subnet_id: The ID of the subnet where the ACR instance is deployed.
- * - acr_private_dns_zone_ids: The IDs of the private DNS zones associated with the ACR instance.
- * - resource_group: The resource group where the AKS cluster will be deployed.
- * - aks_settings: The settings for the AKS cluster.
- * - default_node_pool: The settings for the default node pool.
- * - user_node_pools: The settings for the user-defined node pools.
  */ 
 variable "prefix" {
   type = string
@@ -34,14 +21,6 @@ variable "uid" {
 
 variable "subnet_id" {
   type = string
-}
-
-variable "acr_subnet_id" {
-  type = string
-}
-
-variable "acr_private_dns_zone_ids" {
-  type = list(any)
 }
 
 variable "resource_group" {
@@ -135,5 +114,3 @@ variable "aks_admin_group_object_ids" {
 variable "user_assigned_identity" {
 }
 
-variable "container_registry_id" {
-}

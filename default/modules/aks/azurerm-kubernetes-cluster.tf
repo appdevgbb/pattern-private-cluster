@@ -24,14 +24,14 @@ resource "azurerm_kubernetes_cluster" "dev" {
   monitor_metrics {}
 
   default_node_pool {
-    name                = var.default_node_pool.name
-    enable_auto_scaling = var.default_node_pool.enable_auto_scaling
-    min_count           = var.default_node_pool.min_count
-    max_count           = var.default_node_pool.max_count
-    vm_size             = var.default_node_pool.vm_size
-    os_disk_size_gb     = var.default_node_pool.os_disk_size_gb
-    type                = var.default_node_pool.type
-    vnet_subnet_id      = var.subnet_id
+    name                 = var.default_node_pool.name
+    auto_scaling_enabled = var.default_node_pool.enable_auto_scaling
+    min_count            = var.default_node_pool.min_count
+    max_count            = var.default_node_pool.max_count
+    vm_size              = var.default_node_pool.vm_size
+    os_disk_size_gb      = var.default_node_pool.os_disk_size_gb
+    type                 = var.default_node_pool.type
+    vnet_subnet_id       = var.subnet_id
   }
 
   identity {
@@ -54,7 +54,7 @@ resource "azurerm_kubernetes_cluster" "dev" {
     load_balancer_sku = var.aks_settings.load_balancer_sku
     service_cidr      = var.aks_settings.service_cidr
     dns_service_ip    = var.aks_settings.dns_service_ip
-    outbound_type     = var.aks_settings.private_cluster_enabled == true ? "userDefinedRouting" : "loadBalancer"
+    outbound_type     = var.aks_settings.outbound_type
   }
 
   private_dns_zone_id = var.private_dns_zone_id
