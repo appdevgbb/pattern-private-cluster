@@ -42,26 +42,10 @@ resource "azurerm_kubernetes_cluster" "private_aks" {
   resource_group_name = azurerm_resource_group.rg.name
   dns_prefix          = "pvt-example"
 
-  sku_tier = "Free"
-
   default_node_pool {
     name       = "system"
     node_count = 1
     vm_size    = "Standard_DS2_v2"
-  }
-
-  network_profile {
-    network_plugin    = "azure"
-    load_balancer_sku = "standard"
-    outbound_type     = "loadBalancer"
-  }
-
-  linux_profile {
-    admin_username = "azureuser"
-
-    ssh_key {
-      key_data = file("~/.ssh/id_rsa.pub")
-    }
   }
 
   identity {
