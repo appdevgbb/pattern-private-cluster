@@ -1,9 +1,6 @@
 /* 
  * This Terraform code creates an Azure user-assigned managed identity and assigns it to 
- * various roles in different scopes.  The AKS cluster is deployed with a 
- * private DNS zone, a private ACR, and multiple node pools with different configurations. 
- * The code also includes dependencies on other resources such as a firewall, a subnet, 
- * and a log analytics workspace.
+ * required roles for the private AKS cluster deployment.
  */
 resource "azurerm_user_assigned_identity" "managed-id" {
   resource_group_name = azurerm_resource_group.default.name
@@ -12,41 +9,18 @@ resource "azurerm_user_assigned_identity" "managed-id" {
   name = "aks-user-assigned-managed-id"
 }
 
-resource "azurerm_role_assignment" "aks-mi-roles" {
-  scope                = azurerm_private_dns_zone.hub.id
-  role_definition_name = "Private DNS Zone Contributor"
-  principal_id         = azurerm_user_assigned_identity.managed-id.principal_id
-}
-
-# cluster-1
-#
-
 resource "azurerm_role_assignment" "aks-mi-roles-vnet-rg" {
   scope                = azurerm_resource_group.default.id
   role_definition_name = "Contributor"
   principal_id         = azurerm_user_assigned_identity.managed-id.principal_id
 }
 
-# Network
 resource "azurerm_role_assignment" "aks-mi-roles-aks-pvt" {
   scope                = azurerm_virtual_network.pvt-vnet.id
   role_definition_name = "Network Contributor"
   principal_id         = azurerm_user_assigned_identity.managed-id.principal_id
 }
 
-resource "azurerm_role_assignment" "aks-mi-roles-default-vnet" {
-  scope                = azurerm_virtual_network.default.id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_user_assigned_identity.managed-id.principal_id
-}
-
-resource "azurerm_role_assignment" "aks-mi-roles-aks-pvt-rt" {
-  scope                = azurerm_route_table.aks-pvt-rt.id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_user_assigned_identity.managed-id.principal_id
-}
-
-# DNS
 resource "azurerm_role_assignment" "aks-mi-roles-aks-pvt-dns-zone" {
   scope                = azurerm_private_dns_zone.aksPrivateZone.id
   role_definition_name = "Private DNS Zone Contributor"
@@ -55,15 +29,10 @@ resource "azurerm_role_assignment" "aks-mi-roles-aks-pvt-dns-zone" {
 
 module "aks" {
   depends_on = [
-    module.firewall,
-    azurerm_subnet_route_table_association.aks-pvt,
-    # explict dependency on the firewall rules ensures they're in place before deploying private cluster
-    azurerm_firewall_application_rule_collection.aks,
-    azurerm_firewall_application_rule_collection.azureMonitor,
-    azurerm_firewall_application_rule_collection.updates,
-    azurerm_firewall_network_rule_collection.ntp,
-    azurerm_private_dns_zone.acr,
-    azurerm_role_assignment.aks-mi-roles,
+    azurerm_role_assignment.aks-mi-roles-vnet-rg,
+    azurerm_role_assignment.aks-mi-roles-aks-pvt,
+    azurerm_role_assignment.aks-mi-roles-aks-pvt-dns-zone,
+    azurerm_private_dns_zone.aksPrivateZone,
     azurerm_virtual_network.pvt-vnet
   ]
 
@@ -74,27 +43,19 @@ module "aks" {
 
   user_assigned_identity = azurerm_user_assigned_identity.managed-id
 
-  # aks_admin_group_object_ids = var.aks_admin_group_object_ids
-
   admin_username = var.admin_username
 
   subnet_id      = azurerm_subnet.pvt-cluster.id
   resource_group = azurerm_resource_group.default
 
-  # ACR
-  container_registry_id = azurerm_container_registry.default.id
-  acr_subnet_id         = azurerm_subnet.acr.id
-  acr_private_dns_zone_ids = [
-    azurerm_private_dns_zone.acr.id
-  ]
-
   private_dns_zone_id = azurerm_private_dns_zone.aksPrivateZone.id
   cluster_name        = "pvt-cluster"
+  
   aks_settings = {
-    kubernetes_version      = "1.28.3"
+    kubernetes_version      = "1.31"
     private_cluster_enabled = true
     identity                = "UserAssigned"
-    outbound_type           = "userDefinedRouting"
+    outbound_type           = "loadBalancer"
     network_plugin          = "azure"
     network_policy          = "calico"
     load_balancer_sku       = "standard"

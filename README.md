@@ -1,38 +1,74 @@
-# Pattern - Sample deployment of a private AKS cluster
+# Pattern - Private AKS Cluster Deployment
 
-This is a demo repo to deploy a private Azure Kubernetes Service cluster.
+This repository contains Terraform configuration to deploy a private Azure Kubernetes Service (AKS) cluster.
 
-### Topology: 
+## Topology
 
- - [x] Private Cluster
- - [x] Kubenet
- - [x] Calico
- - [x] User Defined Routes
- - [x] Hub-Spoke Topology
- - [x] Jumpbox
- - [x] Azure Firewall
- 
-### Steps to run this demo
+- [x] Private AKS Cluster
+- [x] Azure CNI networking
+- [x] Calico network policy
+- [x] Standard Load Balancer
+- [x] Private DNS zone for cluster API
+- [x] User-assigned managed identity
+- [x] Single VNet topology
 
-To install the full solution:
+## Prerequisites
 
-1. Run:
+- Azure CLI logged in (`az login`)
+- Terraform >= 1.11.4
+
+## Deployment Steps
+
+1. Set the required environment variable:
+
+```bash
+export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+```
+
+2. Initialize and apply the Terraform configuration:
 
 ```bash
 cd default
 terraform init
 terraform plan
-terraform apply
+terraform apply -auto-approve
 ```
 
-1. Get the KUBECONFIG for the cluster and copy it into the jumpbox
+3. Get the kubeconfig for the cluster:
 
 ```bash
-terraform output -raw kubeconfig > config
+terraform output -raw kubeconfig > kubeconfig
+export KUBECONFIG=$PWD/kubeconfig
 ```
 
-You can retrieve the ssh user and fqdn for the jumpbox with this command:
+4. Verify cluster access:
 
 ```bash
-terraform output -json  jumpbox | jq -r .ssh
+kubectl get nodes
+```
+
+## Configuration
+
+The deployment creates:
+- Resource Group: `rg-demo-gbb`
+- Virtual Network: `pvt-vnet` (10.220.0.0/16)
+- AKS Cluster: `pvt-cluster` (Kubernetes 1.31)
+- System node pool: 2-3 nodes (auto-scaling)
+- User node pool: 1 node
+
+To customize, modify variables in `terraform.tfvars` or update the default values in `000-variables.tf`.
+
+## Outputs
+
+- `resource_group_name` - The resource group name
+- `aks_cluster_name` - The AKS cluster name
+- `aks_managed_id` - The managed identity details
+- `kubeconfig` - The cluster credentials (sensitive)
+
+## Cleanup
+
+To destroy all resources:
+
+```bash
+terraform destroy -auto-approve
 ```

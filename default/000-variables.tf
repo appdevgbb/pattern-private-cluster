@@ -33,7 +33,7 @@ variable "location" {
 
 variable "custom_domain" {
   type    = string
-  default = "azuregbb.com"
+  default = "azureglobalblackbelts.com"
 }
 
 variable "admin_username" {
