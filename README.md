@@ -34,16 +34,20 @@ terraform plan
 terraform apply -auto-approve
 ```
 
-3. Get the kubeconfig for the cluster:
+3. Access the private cluster using Azure CLI command invoke:
+
+```bash
+export AKS_RESOURCE_GROUP=$(terraform output -raw resource_group_name)
+export AKS_CLUSTER_NAME=$(terraform output -raw aks_cluster_name)
+
+az aks command invoke --resource-group $AKS_RESOURCE_GROUP --name $AKS_CLUSTER_NAME --command "kubectl get nodes"
+```
+
+Alternatively, get the kubeconfig (requires network connectivity to the private endpoint):
 
 ```bash
 terraform output -raw kubeconfig > kubeconfig
 export KUBECONFIG=$PWD/kubeconfig
-```
-
-4. Verify cluster access:
-
-```bash
 kubectl get nodes
 ```
 
