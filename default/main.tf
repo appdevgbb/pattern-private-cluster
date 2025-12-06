@@ -11,8 +11,16 @@ terraform {
 provider "azurerm" {
   features {}
   resource_provider_registrations = "all"
-  subscription_id                 = "<SUBSCRIPTION_ID>"
+  subscription_id                 = var.subscription_id
   storage_use_azuread             = true
+}
+
+  }
+}
+
+variable "subscription_id" {
+  description = "The Azure subscription ID to deploy resources to."
+  type        = string
 }
 
 variable "location" {
