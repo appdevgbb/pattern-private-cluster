@@ -4,3 +4,4 @@ default/terraform.tfvars
 default/.terraform*
 default/.terraform.lock.hcl
 default/terraform.*
+default/tfplan

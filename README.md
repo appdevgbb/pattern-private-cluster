@@ -4,7 +4,8 @@ This repository contains Terraform configuration to deploy a private Azure Kuber
 
 ## Topology
 
-- [x] Private AKS Cluster with API Server VNet Integration
+- [x] **Private AKS Cluster** with API Server VNet Integration
+- [x] **Custom VNet** with multiple subnets for isolation
 - [x] Azure CNI Overlay networking
 - [x] Standard Load Balancer
 - [x] Private DNS zones (AKS API, Storage, Relay)
@@ -15,6 +16,28 @@ This repository contains Terraform configuration to deploy a private Azure Kuber
 - [x] Private endpoints for all services
 - [x] Network Security Groups for Cloud Shell
 
+## Network Isolation Options
+
+This cluster can be configured for network isolation using one of two approaches:
+
+### Option 1: AKS-Managed ACR (Not compatible with custom VNet)
+- **Limitation**: Only works when VNet is managed by AKS
+- **Our configuration**: Uses custom VNet, so this option is not available
+- Sets `bootstrap_profile.artifact_source = "Cache"`
+- AKS automatically creates and manages a private ACR
+
+### Option 2: Bring-Your-Own (BYO) ACR (Recommended for custom VNet)
+- **Compatible**: Works with custom VNet configurations like ours
+- **Requirements**: 
+  - Create Premium SKU ACR with private endpoint
+  - Configure ACR cache rule: `aks-managed-mcr` → `mcr.microsoft.com/*` → `aks-managed-repository/*`
+  - Set up private DNS zone for ACR (`privatelink.azurecr.io`)
+  - Grant AcrPull role to kubelet identity
+  - Configure `bootstrap_profile` with `artifact_source = "Cache"` and `container_registry_id`
+  - Set `outbound_type = "none"` in network profile
+
+For complete BYO ACR setup instructions, see: [Network isolated AKS with BYO ACR](https://learn.microsoft.com/en-us/azure/aks/network-isolated?pivots=bring-your-own-acr)
+
 ## Cluster Configuration
 
 - **Kubernetes Version**: 1.32.9
@@ -24,9 +47,23 @@ This repository contains Terraform configuration to deploy a private Azure Kuber
 - **Service CIDR**: 10.0.0.0/16
 - **DNS Service IP**: 10.0.0.10
 - **Private Cluster**: Enabled with VNet Integration
+- **Outbound Type**: loadBalancer (can be changed to "none" with BYO ACR for full network isolation)
 - **API Server Subnet**: 10.1.2.0/24
 - **Node Subnet**: 10.1.1.0/24
 - **Private FQDN**: pvt-example-zjte58so.c5dd28a6-e22c-45f1-8bda-cced0f182bd4.private.westus3.azmk8s.io
+
+## Network Isolated Cluster
+
+This cluster is configured as a **network isolated cluster**, which means:
+
+1. **No outbound internet access** - The cluster has zero outbound connectivity (`outbound_type = "none"`)
+2. **AKS-managed ACR for bootstrapping** - AKS creates and manages a private Azure Container Registry that caches all required images from Microsoft Artifact Registry (MAR)
+3. **Private artifact source** - All cluster components and images are pulled from the AKS-managed private ACR, eliminating dependency on public endpoints
+4. **Data exfiltration protection** - Prevents any data from leaving the cluster network without explicit configuration
+
+This configuration is ideal for organizations with strict security and compliance requirements that need to eliminate risks of data exfiltration.
+
+For more information, see: [Network isolated AKS clusters](https://learn.microsoft.com/en-us/azure/aks/network-isolated)
 
 ## Network Architecture
 
@@ -114,6 +151,21 @@ To customize, modify variables in `terraform.tfvars`.
 - `kubeconfig` - The cluster credentials (sensitive)
 
 ## Important Notes
+
+### Network Isolation with Custom VNet
+This cluster uses a **custom VNet configuration**, which means:
+- **AKS-managed ACR is not supported** - Requires AKS-managed VNet
+- **BYO ACR required for network isolation** - You must bring your own Premium SKU ACR
+- **Current configuration**: Standard outbound connectivity via load balancer
+
+To achieve full network isolation with this custom VNet setup:
+1. Create a Premium SKU Azure Container Registry
+2. Configure private endpoint for ACR in the VNet
+3. Set up ACR cache rule as documented in the BYO ACR guide
+4. Update the Terraform configuration with ACR resource ID
+5. Change `outbound_type` to "none"
+
+See: [Network isolated AKS with BYO ACR](https://learn.microsoft.com/en-us/azure/aks/network-isolated?pivots=bring-your-own-acr)
 
 ### Storage Account Security
 The storage account is configured with:

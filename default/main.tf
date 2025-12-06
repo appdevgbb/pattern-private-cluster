@@ -49,6 +49,11 @@ variable "relay_namespace_name" {
   default     = "arn-cloudshell"
 }
 
+variable "acr_name" {
+  description = "Name of the Azure Container Registry (must be globally unique, alphanumeric only)."
+  type        = string
+}
+
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
@@ -116,8 +121,21 @@ resource "azurerm_subnet" "cloudshell_storage_pe" {
   address_prefixes     = ["10.1.5.0/24"]
 }
 
+resource "azurerm_subnet" "acr_subnet" {
+  name                 = "acr-subnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.1.6.0/24"]
+}
+
 resource "azurerm_user_assigned_identity" "aks_identity" {
   name                = "aks-identity-${var.cluster_name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+}
+
+resource "azurerm_user_assigned_identity" "kubelet_identity" {
+  name                = "kubelet-identity-${var.cluster_name}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
 }
@@ -125,6 +143,72 @@ resource "azurerm_user_assigned_identity" "aks_identity" {
 resource "azurerm_role_assignment" "network_contributor" {
   scope                = azurerm_virtual_network.vnet.id
   role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+
+# ACR Resources for Network Isolation
+resource "azurerm_container_registry" "acr" {
+  name                          = var.acr_name
+  resource_group_name           = azurerm_resource_group.rg.name
+  location                      = azurerm_resource_group.rg.location
+  sku                           = "Premium"
+  public_network_access_enabled = false
+  admin_enabled                 = false
+}
+
+# ACR Cache Rule - CRITICAL for network isolated clusters
+resource "azurerm_container_registry_cache_rule" "aks_managed" {
+  name                  = "aks-managed-mcr"
+  container_registry_id = azurerm_container_registry.acr.id
+  source_repo           = "mcr.microsoft.com/*"
+  target_repo           = "aks-managed-repository/*"
+  credential_set_id     = null
+}
+
+# Private DNS Zone for ACR
+resource "azurerm_private_dns_zone" "acr" {
+  name                = "privatelink.azurecr.io"
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "acr_link" {
+  name                  = "acr-vnetlink"
+  resource_group_name   = azurerm_resource_group.rg.name
+  private_dns_zone_name = azurerm_private_dns_zone.acr.name
+  virtual_network_id    = azurerm_virtual_network.vnet.id
+}
+
+# Private Endpoint for ACR
+resource "azurerm_private_endpoint" "acr" {
+  name                = "acr-private-endpoint"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.acr_subnet.id
+
+  private_service_connection {
+    name                           = "acr-connection"
+    private_connection_resource_id = azurerm_container_registry.acr.id
+    is_manual_connection           = false
+    subresource_names              = ["registry"]
+  }
+
+  private_dns_zone_group {
+    name                 = "acr-dns-zone-group"
+    private_dns_zone_ids = [azurerm_private_dns_zone.acr.id]
+  }
+}
+
+# Grant AcrPull role to Kubelet identity
+resource "azurerm_role_assignment" "kubelet_acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_user_assigned_identity.kubelet_identity.principal_id
+}
+
+# Grant Managed Identity Operator role to AKS control plane identity over kubelet identity
+resource "azurerm_role_assignment" "aks_identity_operator" {
+  scope                = azurerm_user_assigned_identity.kubelet_identity.id
+  role_definition_name = "Managed Identity Operator"
   principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
 }
 
@@ -146,6 +230,12 @@ resource "azurerm_kubernetes_cluster" "private_aks" {
     identity_ids = [azurerm_user_assigned_identity.aks_identity.id]
   }
 
+  kubelet_identity {
+    client_id                 = azurerm_user_assigned_identity.kubelet_identity.client_id
+    object_id                 = azurerm_user_assigned_identity.kubelet_identity.principal_id
+    user_assigned_identity_id = azurerm_user_assigned_identity.kubelet_identity.id
+  }
+
   private_cluster_enabled             = true
   private_cluster_public_fqdn_enabled = false
 
@@ -153,6 +243,28 @@ resource "azurerm_kubernetes_cluster" "private_aks" {
     virtual_network_integration_enabled = true
     subnet_id                           = azurerm_subnet.api_server_subnet.id
   }
+
+  network_profile {
+    network_plugin      = "azure"
+    network_plugin_mode = "overlay"
+    outbound_type       = "none"
+    pod_cidr            = "10.244.0.0/16"
+    service_cidr        = "10.0.0.0/16"
+    dns_service_ip      = "10.0.0.10"
+  }
+
+  bootstrap_profile {
+    artifact_source           = "Cache"
+    container_registry_id = azurerm_container_registry.acr.id
+  }
+
+  depends_on = [
+    azurerm_role_assignment.network_contributor,
+    azurerm_role_assignment.kubelet_acr_pull,
+    azurerm_role_assignment.aks_identity_operator,
+    azurerm_private_endpoint.acr,
+    azurerm_container_registry_cache_rule.aks_managed
+  ]
 }
 
 output "resource_group_name" {
@@ -161,6 +273,14 @@ output "resource_group_name" {
 
 output "cluster_name" {
   value = azurerm_kubernetes_cluster.private_aks.name
+}
+
+output "acr_name" {
+  value = azurerm_container_registry.acr.name
+}
+
+output "acr_login_server" {
+  value = azurerm_container_registry.acr.login_server
 }
 
 output "kubeconfig" {
