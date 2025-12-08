@@ -2,6 +2,7 @@
 *.tfstate
 *.tfstate.backup
 *.tfstate.*.backup
+.terraform.tfstate.lock.info
 
 # Terraform variable files (may contain secrets)
 *.tfvars
@@ -9,7 +10,9 @@
 
 # Terraform directory
 .terraform/
-.terraform.lock.hcl
+
+# Terraform lock file - KEEP TRACKED for reproducible builds
+# Remove this line if you want to ignore it: .terraform.lock.hcl
 
 # Terraform plans
 tfplan
