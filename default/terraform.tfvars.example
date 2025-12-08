@@ -1,8 +1,103 @@
+// ============================================
+// Core Configuration
+// ============================================
+
+// The Azure subscription ID to deploy resources to.
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
 // The Azure region to deploy resources to.
 location = "westus3"
+
+// The name of the resource group.
+resource_group_name = "rg-private-cluster"
+
+// Tags to apply to all resources.
+tags = {
+  Environment = "Development"
+  Project     = "PrivateAKS"
+  ManagedBy   = "Terraform"
+}
+
+// ============================================
+// AKS Cluster Configuration
+// ============================================
 
 // The name of the AKS cluster.
 cluster_name = "private-cluster"
 
-// The name of the resource group.
-resource_group_name = "rg-private-cluster"
+// The Kubernetes version for the AKS cluster.
+// Check https://learn.microsoft.com/azure/aks/supported-kubernetes-versions for supported versions.
+kubernetes_version = "1.32"
+
+// AKS SKU tier - "Free" for dev/test, "Standard" for production with Uptime SLA
+aks_sku_tier = "Standard"
+
+// List of Azure AD group object IDs that will have admin access to the AKS cluster.
+// Since local_account_disabled = true, you MUST provide at least one admin group to access the cluster.
+// Find your group object ID: az ad group show --group "Your Group Name" --query id -o tsv
+aks_admin_group_object_ids = ["00000000-0000-0000-0000-000000000000"]
+
+// ============================================
+// Node Pool Configuration
+// ============================================
+
+// Default node pool VM size
+default_node_vm_size = "Standard_DS2_v2"
+
+// Default node pool node count
+default_node_count = 1
+
+// ============================================
+// Network Configuration
+// ============================================
+
+// VNet address space - subnets are automatically calculated using cidrsubnet
+vnet_address_space = "10.1.0.0/16"
+
+// Pod CIDR for Azure CNI Overlay
+pod_cidr = "10.244.0.0/16"
+
+// Kubernetes service CIDR
+service_cidr = "10.0.0.0/16"
+
+// Kubernetes DNS service IP (must be within service_cidr)
+dns_service_ip = "10.0.0.10"
+
+// ============================================
+// Monitoring Configuration
+// ============================================
+
+// Log Analytics retention in days (30-730)
+log_analytics_retention_days = 30
+
+// ============================================
+// Container Registry Configuration
+// ============================================
+
+// Base name for the Azure Container Registry.
+// A unique 6-character suffix is auto-generated from your subscription ID.
+// Final name example: acrpvtaks + abc123 = acrpvtaksabc123
+acr_name = "acrpvtaks"
+
+// ============================================
+// Cloud Shell Configuration
+// ============================================
+
+// Base name for the Cloud Shell storage account.
+// A unique 6-character suffix is auto-generated from your subscription ID.
+// Final name example: stpvtakscs + abc123 = stpvtakscsabc123
+storage_account_name = "stpvtakscs"
+
+// Base name for the Azure Relay namespace.
+// A unique 6-character suffix is auto-generated from your subscription ID.
+// Final name example: arn-pvtaks + abc123 = arn-pvtaks-abc123
+relay_namespace_name = "arn-pvtaks"
+
+// ============================================
+// Unique Suffix (Optional)
+// ============================================
+
+// Override the auto-generated suffix for globally unique names.
+// Leave empty (default) to auto-generate a 6-char suffix from your subscription ID.
+// Useful when you want predictable names across environments.
+// name_suffix = "prod01"
