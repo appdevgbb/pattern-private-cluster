@@ -14,14 +14,14 @@ terraform init && terraform apply
 
 ## What You Get
 
-- 🔒 **Complete Network Isolation** - No public endpoints, no outbound internet access
-- 🖥️ **Cloud Shell Access** - Manage your cluster from anywhere via Azure Portal
-- 📊 **Built-in Monitoring** - Container Insights with Azure Monitor Agent
-- 🔐 **Entra ID Auth** - No shared credentials, Azure RBAC for access control (local accounts disabled)
-- 🆔 **Workload Identity** - Secure pod-to-Azure service authentication
-- 📦 **Private Container Registry** - ACR Premium with cached MCR images for bootstrapping
-- 🔄 **Auto-Upgrades** - Kubernetes patches and node images update automatically
-- 📜 **Azure Policy** - Governance and compliance enabled by default
+- **Complete Network Isolation** - No public endpoints, no outbound internet access
+- **Cloud Shell Access** - Manage your cluster from anywhere via Azure Portal
+- **Built-in Monitoring** - Container Insights with Azure Monitor Agent
+- **Entra ID Auth** - No shared credentials, Azure RBAC for access control (local accounts disabled)
+- **Workload Identity** - Secure pod-to-Azure service authentication
+- **Private Container Registry** - ACR Premium with cached MCR images for bootstrapping
+- **Auto-Upgrades** - Kubernetes patches and node images update automatically
+- **Azure Policy** - Governance and compliance enabled by default
 
 ## Important Notes
 
@@ -88,7 +88,7 @@ aks_admin_group_object_ids = ["your-group-object-id"]
 # name_suffix = "prod01"
 ```
 
-> 💡 The suffix ensures globally unique names. See `terraform.tfvars.example` for all options.
+> The suffix ensures globally unique names. See `terraform.tfvars.example` for all options.
 
 ### 2. Deploy Everything
 
@@ -104,7 +104,7 @@ This creates about 40 resources and takes ~10 minutes.
 
 This is the magic that lets you access your private cluster from anywhere.
 
-> 💡 **Tip:** Run `terraform output` to see the actual resource names with suffixes.
+> **Tip:** Run `terraform output` to see the actual resource names with suffixes.
 
 1. Open **Azure Portal** → Click the **Cloud Shell** icon (top right)
 2. Click **Settings** (gear icon) → **Reset user settings** if you already have Cloud Shell configured
@@ -115,16 +115,16 @@ This is the magic that lets you access your private cluster from anywhere.
    - **Resource Group**: Your `resource_group_name` from tfvars
    - **Storage Account**: Use `cloudshell_storage_account_name` from terraform output (select "Use existing")
    - **File Share**: `acsshare` (select "Use existing")
-5. Check ✅ **Show VNET isolation settings**
+5. Check **Show VNET isolation settings**
 6. Fill in the VNet settings:
    - **Virtual Network**: `vnet-<cluster_name>` (based on your `cluster_name` in tfvars)
    - **Network Profile**: `np-cloudshell-<location>` (based on your `location` in tfvars)
    - **Relay Namespace**: Use `cloudshell_relay_namespace_name` from terraform output
 7. Click **Create storage**
 
-After a few minutes, you'll have a Cloud Shell instance running inside your VNet accessible from the Azure Portal! 🎉
+After a few minutes, you'll have a Cloud Shell instance running inside your VNet accessible from the Azure Portal!
 
-> ℹ️ **Network Note:** Cloud Shell runs in a separate subnet with internet access (required for Azure CLI, package updates, etc.). The AKS subnet remains fully isolated—Cloud Shell can reach the cluster's API server via private endpoint, but cannot reach pods directly over the internet.
+> **Network Note:** Cloud Shell runs in a separate subnet with internet access (required for Azure CLI, package updates, etc.). The AKS subnet remains fully isolated—Cloud Shell can reach the cluster's API server via private endpoint, but cannot reach pods directly over the internet.
 
 ## Validation
 
@@ -148,7 +148,7 @@ nslookup <acr_name>.azurecr.io
 # Test that outbound internet is blocked (should timeout after ~30 seconds)
 kubectl run nettest --image=busybox --restart=Never --rm -i --tty=false -- \
   sh -c "wget -T 5 -q -O- http://1.1.1.1 2>&1 || echo 'BLOCKED: No internet access'"
-# Expected: "timed out waiting for the condition" = internet is blocked ✓
+# Expected: "timed out waiting for the condition" = internet is blocked
 ```
 
 ### 3. Verify ACR Cache
@@ -168,7 +168,7 @@ kubectl run logtest --image=busybox --restart=Never -- \
 kubectl get pod logtest -w
 ```
 
-> ☕ Wait 5-10 minutes for logs to reach Log Analytics, then:
+> Wait 5-10 minutes for logs to reach Log Analytics, then:
 
 ```bash
 # Query logs (use your resource_group_name and cluster_name from tfvars)
@@ -301,7 +301,7 @@ resource "azurerm_container_registry_cache_rule" "aks_managed" {
 }
 ```
 
-> ⚠️ **This cache rule must match exactly** - it's documented in [Microsoft's network isolated cluster guide](https://learn.microsoft.com/azure/aks/network-isolated?pivots=byo-acr). Changing these values will break cluster creation and upgrades.
+> **This cache rule must match exactly** - it's documented in [Microsoft's network isolated cluster guide](https://learn.microsoft.com/azure/aks/network-isolated?pivots=byo-acr). Changing these values will break cluster creation and upgrades.
 
 ## Learn More
 
