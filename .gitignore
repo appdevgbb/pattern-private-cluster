@@ -1,7 +1,29 @@
-default/terraform.tfstate
-default/terraform.tfstate.backup
-default/terraform.tfvars
-default/.terraform*
-default/.terraform.lock.hcl
-default/terraform.*
-default/tfplan
+# Terraform state files
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+.terraform.tfstate.lock.info
+
+# Terraform variable files (may contain secrets)
+*.tfvars
+!*.tfvars.example
+
+# Terraform directory
+.terraform/
+
+# Terraform lock file - KEEP TRACKED for reproducible builds
+# Remove this line if you want to ignore it: .terraform.lock.hcl
+
+# Terraform plans
+tfplan
+*.tfplan
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
