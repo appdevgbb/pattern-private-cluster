@@ -7,7 +7,7 @@ provider "azurerm" {
 variables {
   application_name = "aks-tf-tests"
   environment_name = "test"
-  location         = "eastus"
+  location         = "westus3"
 }
 
 // Sample Setup. This could setup any pre-requisites needed for the test. 
@@ -23,7 +23,7 @@ run "setup" {
     vcpu_max      = 8
     memory_gb_min = 4
     memory_gb_max = 8
-    name_filter   = "Promo"
+    name_filter   = "D"
   }
 
   providers = {
