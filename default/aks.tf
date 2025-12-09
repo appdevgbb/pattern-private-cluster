@@ -43,8 +43,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   private_cluster_public_fqdn_enabled = false
   private_dns_zone_id                 = "System"
 
-  # Disable local accounts for enhanced security
-  local_account_disabled = true
+  # Disable local accounts only when Azure AD groups are configured
+  local_account_disabled = length(var.aks_admin_group_object_ids) > 0
 
   # Enable OIDC issuer and workload identity
   oidc_issuer_enabled       = true
@@ -78,9 +78,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
     subnet_id                           = azurerm_subnet.api_server_subnet.id
   }
 
-  azure_active_directory_role_based_access_control {
-    azure_rbac_enabled     = true
-    admin_group_object_ids = length(var.aks_admin_group_object_ids) > 0 ? var.aks_admin_group_object_ids : null
+  dynamic "azure_active_directory_role_based_access_control" {
+    for_each = length(var.aks_admin_group_object_ids) > 0 ? [1] : []
+    content {
+      azure_rbac_enabled     = true
+      admin_group_object_ids = var.aks_admin_group_object_ids
+    }
   }
 
   network_profile {

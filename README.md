@@ -27,9 +27,9 @@ terraform init && terraform apply
 
 ### Authentication
 
-- **Local accounts are disabled** - You cannot use `az aks get-credentials --admin`. Only Azure RBAC authentication works.
+- **Local accounts** - Disabled when admin groups are configured; enabled otherwise for development convenience
 - **Deployer gets admin access** - The user running `terraform apply` is automatically granted `Azure Kubernetes Service RBAC Cluster Admin` role.
-- **Admin groups are optional** - Set `aks_admin_group_object_ids` to grant additional Entra ID groups cluster admin access. If you need to create a group: `az ad group create --display-name "AKS Admins" --mail-nickname "aks-admins" --query id -o tsv`
+- **Admin groups are optional** - Set `aks_admin_group_object_ids` to grant additional Entra ID groups cluster admin access and disable local accounts. If you need to create a group: `az ad group create --display-name "AKS Admins" --mail-nickname "aks-admins" --query id -o tsv`
 
 ### Maintenance Windows
 
