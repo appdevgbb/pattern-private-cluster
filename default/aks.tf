@@ -55,6 +55,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     node_count     = var.default_node_count
     vm_size        = var.default_node_vm_size
     vnet_subnet_id = azurerm_subnet.aks_subnet.id
+    os_sku         = "AzureLinux"
 
     upgrade_settings {
       max_surge = "10%"
@@ -79,7 +80,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   azure_active_directory_role_based_access_control {
     azure_rbac_enabled     = true
-    admin_group_object_ids = var.aks_admin_group_object_ids
+    admin_group_object_ids = length(var.aks_admin_group_object_ids) > 0 ? var.aks_admin_group_object_ids : null
   }
 
   network_profile {

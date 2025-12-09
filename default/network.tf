@@ -46,7 +46,7 @@ resource "azurerm_subnet" "acr_subnet" {
   name                 = "acr-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 3)] # x.x.3.0/24
+  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 6)] # x.x.6.0/24
 }
 
 ########################################
@@ -57,7 +57,7 @@ resource "azurerm_subnet" "cloudshell_container" {
   name                 = "cloudshellsubnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 4)] # x.x.4.0/24
+  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 3)] # x.x.3.0/24
 
   delegation {
     name = "cloudshell-delegation"
@@ -74,14 +74,14 @@ resource "azurerm_subnet" "cloudshell_relay" {
   name                 = "relaysubnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 5)] # x.x.5.0/24
+  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 4)] # x.x.4.0/24
 }
 
 resource "azurerm_subnet" "cloudshell_storage_pe" {
   name                 = "storage-pe-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 6)] # x.x.6.0/24
+  address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 5)] # x.x.5.0/24
 
   # Enable network policies for private endpoints per MS Cloud Shell best practices
   private_endpoint_network_policies = "Enabled"
