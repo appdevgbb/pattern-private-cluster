@@ -53,11 +53,13 @@ resource "azurerm_subnet" "acr_subnet" {
 # Subnets - Cloud Shell
 ########################################
 
+# Container Subnet - for Container Instances running Cloud Shell
 resource "azurerm_subnet" "cloudshell_container" {
   name                 = "cloudshellsubnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = [cidrsubnet(var.vnet_address_space, 8, 3)] # x.x.3.0/24
+  service_endpoints    = ["Microsoft.Storage"]
 
   delegation {
     name = "cloudshell-delegation"
