@@ -10,6 +10,10 @@ variable "resource_group_name" {
 variable "location" {
   type = string
 }
-variable "vm_size" {
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
+variable "vnet_address_space" {
   type = string
 }
