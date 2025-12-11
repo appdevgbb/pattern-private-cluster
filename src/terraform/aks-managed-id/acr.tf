@@ -35,9 +35,9 @@ resource "azurerm_container_registry_cache_rule" "aks_managed" {
 
 resource "azurerm_private_endpoint" "acr" {
   name                = "pe-acr-${local.acr_name}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  subnet_id           = azurerm_subnet.acr_subnet.id
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  subnet_id           = var.acr_subnet_id
   tags                = var.tags
 
   private_service_connection {

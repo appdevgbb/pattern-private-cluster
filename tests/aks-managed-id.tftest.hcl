@@ -60,7 +60,7 @@ run "provision" {
   command = apply
 
   module {
-    source = "./src/terraform/aks-baseline"
+    source = "./src/terraform/aks-managed-id"
   }
 
   variables {
@@ -71,6 +71,7 @@ run "provision" {
     vm_size             = run.vm_size.candidate_sku
     aks_subnet_id       = run.network.aks_subnet_id
     aks_api_subnet_id   = run.network.api_server_subnet_id
+    acr_subnet_id       = run.network.acr_subnet_id
     pod_cidr            = "10.244.0.0/16"
     service_cidr        = "10.0.0.0/16"
     dns_service_ip      = "10.0.0.10"

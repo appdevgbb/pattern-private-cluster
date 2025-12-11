@@ -40,6 +40,9 @@ variable "default_node_count" {
 variable "aks_subnet_id" {
   type = string
 }
+variable "acr_subnet_id" {
+  type = string
+}
 variable "pod_cidr" {
   type = string
 }
