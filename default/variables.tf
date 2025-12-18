@@ -68,7 +68,7 @@ variable "default_node_vm_size" {
 variable "default_node_count" {
   description = "The number of nodes in the default node pool."
   type        = number
-  default     = 1
+  default     = 2
 
   validation {
     condition     = var.default_node_count >= 1 && var.default_node_count <= 100

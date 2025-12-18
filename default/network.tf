@@ -101,6 +101,7 @@ resource "azurerm_network_security_group" "aks" {
   tags                = var.tags
 }
 
+# Allow outbound to Azure Monitor for Managed Prometheus
 resource "azurerm_network_security_rule" "aks_deny_internet_outbound" {
   name                        = "DenyInternetOutbound"
   priority                    = 4000

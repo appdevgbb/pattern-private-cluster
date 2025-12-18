@@ -137,6 +137,7 @@ resource "azurerm_private_endpoint" "storage_file" {
 ########################################
 
 # ACI Service needs Network Contributor on network profile for Cloud Shell VNet
+# Required per Agents.md workflow step: "Provide network contributor access to ACI service"
 resource "azurerm_role_assignment" "aci_network_profile_contributor" {
   scope                = azurerm_network_profile.cloudshell.id
   role_definition_name = "Network Contributor"
@@ -144,6 +145,7 @@ resource "azurerm_role_assignment" "aci_network_profile_contributor" {
 }
 
 # ACI Service needs Contributor on Relay namespace for Cloud Shell VNet
+# Required per Agents.md workflow step: "Provide contributor access to ACI service for Azure Relay"
 resource "azurerm_role_assignment" "aci_relay_contributor" {
   scope                = azurerm_relay_namespace.cloudshell.id
   role_definition_name = "Contributor"

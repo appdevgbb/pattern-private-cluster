@@ -147,7 +147,7 @@ kubectl get pods -n kube-system | grep -E "ama|workload-identity"
 nslookup <acr_name>.azurecr.io
 
 # Test that outbound internet is blocked (should timeout after ~30 seconds)
-kubectl run nettest --image=busybox --restart=Never --rm -i --tty=false -- \
+kubectl run nettest --image=mcr.microsoft.com/azurelinux/busybox:1.36 --restart=Never --rm -i --tty=false -- \
   sh -c "wget -T 5 -q -O- http://1.1.1.1 2>&1 || echo 'BLOCKED: No internet access'"
 # Expected: "timed out waiting for the condition" = internet is blocked
 ```
@@ -156,15 +156,17 @@ kubectl run nettest --image=busybox --restart=Never --rm -i --tty=false -- \
 
 ```bash
 # Check ACR cache rule and cached images (use your acr_name from tfvars)
-az acr cache list --registry <acr_name> --output table
-az acr repository list --name <acr_name> --output table
+ACR_NAME=$(terraform output -json | jq -r '.acr_name.value')
+
+az acr cache list --registry ${ACR_NAME} --output table
+az acr repository list --name ${ACR_NAME} --output table
 ```
 
 ### 4. Test Container Logs
 
 ```bash
 # Deploy a test pod that generates logs
-kubectl run logtest --image=busybox --restart=Never -- \
+kubectl run logtest --image=mcr.microsoft.com/azurelinux/busybox:1.36 --restart=Never -- \
   sh -c "while true; do echo \"Test log at \$(date)\"; sleep 10; done"
 kubectl get pod logtest -w
 ```
@@ -173,10 +175,14 @@ kubectl get pod logtest -w
 
 ```bash
 # Query logs (use your resource_group_name and cluster_name from tfvars)
-export WORKSPACE_ID=$(az monitor log-analytics workspace show \
-  -g <resource_group_name> -n log-<cluster_name> --query customerId -o tsv)
+LOG_ANALYTICS_WS_NAME=$(terraform output -json | jq -r '.log_analytics_workspace_name.value')
+CLUSTER_NAME=$(terraform output -json | jq -r '.cluster_name.value')
+RESOURCE_GROUP_NAME=$(terraform output -json | jq -r '.resource_group_name.value')
 
-az monitor log-analytics query -w $WORKSPACE_ID \
+export WORKSPACE_ID=$(az monitor log-analytics workspace show \
+  -g ${RESOURCE_GROUP_NAME} -n ${LOG_ANALYTICS_WS_NAME} --query customerId -o tsv)
+
+az monitor log-analytics query -w ${WORKSPACE_ID} \
   --analytics-query "ContainerLogV2 | where PodName == 'logtest' | project TimeGenerated, LogMessage | take 5"
 
 # Clean up
