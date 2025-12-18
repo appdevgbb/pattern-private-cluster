@@ -105,25 +105,19 @@ This creates about 40 resources and takes ~10 minutes.
 
 This is the magic that lets you access your private cluster from anywhere.
 
-> **Tip:** Run `terraform output` to see the actual resource names with suffixes.
+1. In the Azure Portal, navigate to your cluster and click on **Connect**
 
-1. Open **Azure Portal** → Click the **Cloud Shell** icon (top right)
-2. Click **Settings** (gear icon) → **Reset user settings** if you already have Cloud Shell configured
-3. Select **Bash** → Click **Show advanced settings**
-4. Fill in:
-   - **Subscription**: Your subscription
-   - **Region**: Same as your `location` in tfvars
-   - **Resource Group**: Your `resource_group_name` from tfvars
-   - **Storage Account**: Use `cloudshell_storage_account_name` from terraform output (select "Use existing")
-   - **File Share**: `acsshare` (select "Use existing")
-5. Check **Show VNET isolation settings**
-6. Fill in the VNet settings:
-   - **Virtual Network**: `vnet-<cluster_name>` (based on your `cluster_name` in tfvars)
-   - **Network Profile**: `np-cloudshell-<location>` (based on your `location` in tfvars)
-   - **Relay Namespace**: Use `cloudshell_relay_namespace_name` from terraform output
-7. Click **Create storage**
+![click on connect](assets/click-on-connect.png)
 
-After a few minutes, you'll have a Cloud Shell instance running inside your VNet accessible from the Azure Portal!
+1. Next, click on the **Configure** button to setup Cloud Shell for private cluster connection.
+
+![configure cloud shell](assets/configure.png)
+
+1. After a few minutes, you'll have a Cloud Shell instance running inside your VNet accessible from the Azure Portal.
+
+1. Finnaly click on **Open Cloud Shell**
+
+![cloud shell](assets/cloud-shell.png)
 
 > **Network Note:** Cloud Shell runs in a separate subnet with internet access (required for Azure CLI, package updates, etc.). The AKS subnet remains fully isolated—Cloud Shell can reach the cluster's API server via private endpoint, but cannot reach pods directly over the internet.
 
