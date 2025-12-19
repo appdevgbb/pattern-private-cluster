@@ -223,66 +223,103 @@ terraform destroy -auto-approve
 ## Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            VNet (10.1.0.0/16)                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────┐  ┌──────────────────┐  ┌─────────────────┐             │
-│  │   aks-subnet    │  │ api-server-subnet│  │   acr-subnet    │             │
-│  │   10.1.1.0/24   │  │   10.1.2.0/24    │  │   10.1.3.0/24   │             │
-│  │                 │  │                  │  │                 │             │
-│  │  ┌───────────┐  │  │  ┌───────────┐   │  │  ┌───────────┐  │             │
-│  │  │ AKS Nodes │  │  │  │ API Server│   │  │  │  ACR PE   │  │             │
-│  │  └───────────┘  │  │  │(delegated)│   │  │  └───────────┘  │             │
-│  │      [NSG]      │  │  └───────────┘   │  └─────────────────┘             │
-│  └─────────────────┘  └──────────────────┘                                  │
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │cloudshellsubnet │  │  relaysubnet    │  │storage-pe-subnet│              │
-│  │   10.1.4.0/24   │  │   10.1.5.0/24   │  │   10.1.6.0/24   │              │
-│  │                 │  │                 │  │                 │              │
-│  │  ┌───────────┐  │  │  ┌───────────┐  │  │  ┌───────────┐  │              │
-│  │  │Cloud Shell│  │  │  │ Relay PE  │  │  │  │Storage PE │  │              │
-│  │  │(delegated)│  │  │  └───────────┘  │  │  │(blob+file)│  │              │
-│  │  └───────────┘  │  └─────────────────┘  │  └───────────┘  │              │
-│  └─────────────────┘                       └─────────────────┘              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                              VNet (10.1.0.0/16)                                   │
+├───────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                   │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐                 │
+│  │   aks-subnet     │  │ api-server-subnet│  │   acr-subnet     │                 │
+│  │   10.1.1.0/24    │  │   10.1.2.0/24    │  │   10.1.3.0/24    │                 │
+│  │                  │  │                  │  │                  │                 │
+│  │  ┌────────────┐  │  │  ┌────────────┐  │  │  ┌────────────┐  │                 │
+│  │  │ AKS Nodes  │  │  │  │ API Server │  │  │  │  ACR PE    │  │                 │
+│  │  └────────────┘  │  │  │(delegated) │  │  │  └────────────┘  │                 │
+│  │   [NSG+UDR]──────┼──┼──┴────────────┘  │  └──────────────────┘                 │
+│  └──────┬───────────┘  └──────────────────┘                                       │
+│         │ 0.0.0.0/0 → Firewall                                                    │
+│         ▼                                                                         │
+│  ┌────────────────────────────────────────────┐  ┌──────────────────┐             │
+│  │    AzureFirewallSubnet (10.1.10.0/24)      │  │  AzureBastionSN  │             │
+│  │                                            │  │   10.1.0.0/24    │             │
+│  │  ┌──────────────────────────────────────┐  │  │                  │             │
+│  │  │     Azure Firewall (10.1.10.4)       │  │  │  ┌────────────┐  │             │
+│  │  │   Public IP: 4.242.130.197           │──┼──┼──│  Bastion   │  │             │
+│  │  │   • Network Rules (AKS mgmt)         │  │  │  └──────┬─────┘  │             │
+│  │  │   • Application Rules (HTTP/HTTPS)   │  │  └─────────┼────────┘             │
+│  │  └──────────────────────────────────────┘  │            │ RDP                  │
+│  └────────────────────────────────────────────┘            ▼                      │
+│         ▲                                    ┌──────────────────┐                 │
+│         │ 0.0.0.0/0 → Firewall               │ jumpservers-snet │                 │
+│         │                                    │   10.1.7.0/24    │                 │
+│  ┌──────┴───────────┐  ┌──────────────────┐  │                  │                 │
+│  │cloudshellsubnet  │  │  relaysubnet     │  │  ┌────────────┐  │                 │
+│  │   10.1.4.0/24    │  │   10.1.5.0/24    │  │  │  Win11 VM  │  │                 │
+│  │                  │  │                  │  │  │ (10.1.7.4) │  │                 │
+│  │  ┌────────────┐  │  │  ┌────────────┐  │  │  │   WSL2     │  │                 │
+│  │  │Cloud Shell │  │  │  │ Relay PE   │  │  │  └────────────┘  │                 │
+│  │  │(delegated) │  │  │  └────────────┘  │  │    [NSG+UDR]     │                 │
+│  │  └────────────┘  │  └──────────────────┘  └──────────────────┘                 │
+│  └──────────────────┘                                                             │
+│                                                                                   │
+│  ┌──────────────────┐                                                             │
+│  │storage-pe-subnet │                 Traffic Flow:                               │
+│  │   10.1.6.0/24    │                 ═══════════════                             │
+│  │                  │                 AKS/Jumpbox → Firewall → Internet           │
+│  │  ┌────────────┐  │                 Bastion → Jumpbox (RDP)                     │
+│  │  │Storage PE  │  │                 Cloud Shell → API Server (Private)          │
+│  │  │(blob+file) │  │                                                             │
+│  │  └────────────┘  │                                                             │
+│  └──────────────────┘                                                             │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## How It Works
 
-This cluster is **fully network isolated** with blocked outbound internet:
+This cluster is **fully network isolated** with centralized egress control through Azure Firewall:
 
 | Setting | Value | What It Does |
 |---------|-------|--------------|
-| `outbound_type` | `none` | AKS doesn't provision egress infrastructure (no LB, no NAT Gateway) |
-| `NSG deny rule` | `DenyInternetOutbound` | Blocks all outbound traffic to `Internet` service tag |
+| `outbound_type` | `userDefinedRouting` | AKS uses route tables (UDR) for egress control |
+| `Route table (UDR)` | `0.0.0.0/0 → Firewall` | All outbound traffic forced through Azure Firewall |
+| `NSG deny rule` | `DenyInternetOutbound` (commented out) | Previously blocked internet; now relies on firewall routing |
 | `bootstrap_profile` | `Cache` | System images pulled from private ACR, not MCR |
 | `private_cluster_enabled` | `true` | API server only accessible within VNet |
 | `private_dns_zone_id` | `System` | AKS creates and manages the private DNS zone for API server |
 | `local_account_disabled` | `true` | No local admin kubeconfig; Azure RBAC only |
 | `public_network_access_enabled` | `false` | ACR and Storage not exposed publicly |
 
-### Why Both `outbound_type=none` AND an NSG?
+### Centralized Egress with Azure Firewall
 
-With just `outbound_type=none`, AKS doesn't provision outbound infrastructure, but Azure's fabric routing still allows pods to reach the internet via SNAT. To truly block egress, we add an NSG rule on the AKS subnet:
+All outbound traffic from the AKS subnet and jumpbox subnet is routed through Azure Firewall (10.1.10.4) using User Defined Routes (UDR). This provides:
+
+### Centralized Egress with Azure Firewall
+
+All outbound traffic from the AKS subnet and jumpbox subnet is routed through Azure Firewall (10.1.10.4) using User Defined Routes (UDR). This provides:
+
+- **Centralized traffic control** - All egress flows through a single inspection point
+- **Application and network rules** - Fine-grained control over allowed destinations
+- **Logging and monitoring** - Visibility into all outbound connections
+- **Consistent security policy** - Single firewall configuration for all workloads
+
+The route table configuration:
 
 ```hcl
-resource "azurerm_network_security_rule" "aks_deny_internet_outbound" {
-  name                       = "DenyInternetOutbound"
-  priority                   = 4000
-  direction                  = "Outbound"
-  access                     = "Deny"
-  protocol                   = "*"
-  destination_address_prefix = "Internet"  # Azure service tag - excludes private IPs
+resource "azurerm_route" "firewall" {
+  address_prefix         = "0.0.0.0/0"
+  next_hop_type          = "VirtualAppliance"
+  next_hop_in_ip_address = "10.1.10.4"  # Azure Firewall private IP
 }
+
+# Applied to both AKS and jumpbox subnets
+resource "azurerm_subnet_route_table_association" "aks" { ... }
+resource "azurerm_subnet_route_table_association" "jumpservers" { ... }
 ```
 
-This blocks internet access while still allowing:
+Traffic still flows within the VNet for:
 
-- VNet traffic (private endpoints, peered VNets)
-- Azure services via private endpoints (ACR, Storage, Relay)
+- Private endpoints (ACR, Storage, Relay)
 - Pod-to-pod and pod-to-service communication
+- API server access (private endpoint)
 
 ### The ACR Cache Rule
 
