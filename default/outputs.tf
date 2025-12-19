@@ -29,21 +29,6 @@ output "oidc_issuer_url" {
   value       = azurerm_kubernetes_cluster.aks.oidc_issuer_url
 }
 
-output "cloudshell_container_subnet_id" {
-  description = "Subnet hosting Cloud Shell containers."
-  value       = azurerm_subnet.cloudshell_container.id
-}
-
-output "cloudshell_storage_account_name" {
-  description = "Storage account for Cloud Shell."
-  value       = azurerm_storage_account.cloudshell.name
-}
-
-output "cloudshell_relay_namespace_name" {
-  description = "Relay namespace used by Cloud Shell."
-  value       = azurerm_relay_namespace.cloudshell.name
-}
-
 output "log_analytics_workspace_id" {
   description = "The ID of the Log Analytics workspace for Container Insights."
   value       = azurerm_log_analytics_workspace.aks.id
@@ -52,4 +37,56 @@ output "log_analytics_workspace_id" {
 output "log_analytics_workspace_name" {
   description = "The name of the Log Analytics workspace."
   value       = azurerm_log_analytics_workspace.aks.name
+}
+
+########################################
+# Firewall Outputs
+########################################
+
+output "firewall_name" {
+  description = "The name of the Azure Firewall."
+  value       = azurerm_firewall.aks.name
+}
+
+output "firewall_private_ip" {
+  description = "The private IP address of the Azure Firewall."
+  value       = azurerm_firewall.aks.ip_configuration[0].private_ip_address
+}
+
+output "firewall_public_ip" {
+  description = "The public IP address of the Azure Firewall."
+  value       = azurerm_public_ip.firewall.ip_address
+}
+
+########################################
+# Bastion Outputs
+########################################
+
+output "bastion_name" {
+  description = "The name of the Azure Bastion host."
+  value       = azurerm_bastion_host.bastion.name
+}
+
+output "bastion_dns_name" {
+  description = "The DNS name of the Azure Bastion host."
+  value       = azurerm_bastion_host.bastion.dns_name
+}
+
+########################################
+# Jumpbox Outputs
+########################################
+
+output "jumpbox_vm_name" {
+  description = "The name of the Windows jumpbox VM."
+  value       = azurerm_windows_virtual_machine.jumpbox.name
+}
+
+output "jumpbox_private_ip" {
+  description = "The private IP address of the Windows jumpbox."
+  value       = azurerm_network_interface.jumpbox.private_ip_address
+}
+
+output "jumpbox_admin_username" {
+  description = "The admin username for the Windows jumpbox."
+  value       = azurerm_windows_virtual_machine.jumpbox.admin_username
 }

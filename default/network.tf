@@ -93,7 +93,7 @@ resource "azurerm_subnet" "cloudshell_storage_pe" {
 # Network Security Groups
 ########################################
 
-# NSG for AKS subnet - blocks outbound internet traffic
+# NSG for AKS subnet - temporarily allowing all traffic for troubleshooting
 resource "azurerm_network_security_group" "aks" {
   name                = "nsg-aks-subnet"
   location            = azurerm_resource_group.rg.location
@@ -101,19 +101,20 @@ resource "azurerm_network_security_group" "aks" {
   tags                = var.tags
 }
 
-resource "azurerm_network_security_rule" "aks_deny_internet_outbound" {
-  name                        = "DenyInternetOutbound"
-  priority                    = 4000
-  direction                   = "Outbound"
-  access                      = "Deny"
-  protocol                    = "*"
-  source_port_range           = "*"
-  destination_port_range      = "*"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "Internet"
-  resource_group_name         = azurerm_resource_group.rg.name
-  network_security_group_name = azurerm_network_security_group.aks.name
-}
+# Temporarily commented out to allow cluster provisioning
+# resource "azurerm_network_security_rule" "aks_deny_internet_outbound" {
+#   name                        = "DenyInternetOutbound"
+#   priority                    = 4000
+#   direction                   = "Outbound"
+#   access                      = "Deny"
+#   protocol                    = "*"
+#   source_port_range           = "*"
+#   destination_port_range      = "*"
+#   source_address_prefix       = "*"
+#   destination_address_prefix  = "Internet"
+#   resource_group_name         = azurerm_resource_group.rg.name
+#   network_security_group_name = azurerm_network_security_group.aks.name
+# }
 
 resource "azurerm_subnet_network_security_group_association" "aks" {
   subnet_id                 = azurerm_subnet.aks_subnet.id

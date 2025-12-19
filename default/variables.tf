@@ -158,3 +158,14 @@ variable "name_suffix" {
     error_message = "Name suffix must be 1-10 lowercase alphanumeric characters."
   }
 }
+
+variable "jumpbox_admin_password" {
+  description = "Admin password for the Windows jumpbox VM. Must meet Azure complexity requirements."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^.{12,123}$", var.jumpbox_admin_password))
+    error_message = "Password must be between 12 and 123 characters."
+  }
+}

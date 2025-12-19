@@ -89,7 +89,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   network_profile {
     network_plugin      = "azure"
     network_plugin_mode = "overlay"
-    outbound_type       = "none"
+    outbound_type       = "userDefinedRouting"
     pod_cidr            = var.pod_cidr
     service_cidr        = var.service_cidr
     dns_service_ip      = var.dns_service_ip
@@ -124,6 +124,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   depends_on = [
+    azurerm_subnet_route_table_association.aks,
     azurerm_role_assignment.aks_network_contributor,
     azurerm_role_assignment.aks_identity_operator,
     azurerm_role_assignment.kubelet_acr_pull,
