@@ -39,7 +39,7 @@ resource "azurerm_windows_virtual_machine" "jumpbox" {
   source_image_reference {
     publisher = "MicrosoftWindowsDesktop"
     offer     = "Windows-11"
-    sku       = "win11-23h2-pro"
+    sku       = "win11-24h2-ent"
     version   = "latest"
   }
 
@@ -52,53 +52,90 @@ resource "azurerm_windows_virtual_machine" "jumpbox" {
   }
 }
 
-# Install Azure CLI and kubectl via Custom Script Extension
-resource "azurerm_virtual_machine_extension" "jumpbox_tools" {
-  name                 = "InstallTools"
-  virtual_machine_id   = azurerm_windows_virtual_machine.jumpbox.id
-  publisher            = "Microsoft.Compute"
-  type                 = "CustomScriptExtension"
-  type_handler_version = "1.10"
+# Install Chocolatey
+resource "azurerm_virtual_machine_run_command" "install_chocolatey" {
+  name               = "install-chocolatey"
+  location           = azurerm_resource_group.rg.location
+  virtual_machine_id = azurerm_windows_virtual_machine.jumpbox.id
+  
+  source {
+    script = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+  }
+  
+  tags = var.tags
+}
 
-  settings = jsonencode({
-    commandToExecute = <<-EOT
-      powershell -ExecutionPolicy Unrestricted -Command "
-        # Install Chocolatey
-        Set-ExecutionPolicy Bypass -Scope Process -Force;
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'));
-        
-        # Install Azure CLI
-        choco install azure-cli -y;
-        
-        # Install kubectl
-        choco install kubernetes-cli -y;
-        
-        # Install VS Code
-        choco install vscode -y;
-        
-        # Enable WSL2
-        dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart;
-        dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart;
-        
-        # Download and install WSL2 kernel update
-        Invoke-WebRequest -Uri https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi -OutFile wsl_update_x64.msi;
-        Start-Process msiexec.exe -Wait -ArgumentList '/i wsl_update_x64.msi /quiet';
-        Remove-Item wsl_update_x64.msi;
-        
-        # Set WSL2 as default
-        wsl --set-default-version 2;
-        
-        # Install Ubuntu (will complete after reboot)
-        wsl --install -d Ubuntu-22.04 --no-launch;
-        
-        # Refresh environment variables
-        refreshenv;
-        
-        # Note: VM needs to be restarted for WSL2 to be fully functional
-      "
-    EOT
-  })
+# Install Azure CLI
+resource "azurerm_virtual_machine_run_command" "install_azure_cli" {
+  name               = "install-azure-cli"
+  location           = azurerm_resource_group.rg.location
+  virtual_machine_id = azurerm_windows_virtual_machine.jumpbox.id
+  
+  depends_on = [azurerm_virtual_machine_run_command.install_chocolatey]
+  
+  source {
+    script = "Start-Sleep -Seconds 30; C:\\ProgramData\\chocolatey\\bin\\choco.exe install azure-cli -y"
+  }
+  
+  tags = var.tags
+}
 
+# Install VS Code
+resource "azurerm_virtual_machine_run_command" "install_vscode" {
+  name               = "install-vscode"
+  location           = azurerm_resource_group.rg.location
+  virtual_machine_id = azurerm_windows_virtual_machine.jumpbox.id
+  
+  depends_on = [azurerm_virtual_machine_run_command.install_azure_cli]
+  
+  source {
+    script = "C:\\ProgramData\\chocolatey\\bin\\choco.exe install vscode -y"
+  }
+  
+  tags = var.tags
+}
+
+# Enable WSL2 features
+resource "azurerm_virtual_machine_run_command" "enable_wsl2_features" {
+  name               = "enable-wsl2-features"
+  location           = azurerm_resource_group.rg.location
+  virtual_machine_id = azurerm_windows_virtual_machine.jumpbox.id
+  
+  depends_on = [azurerm_virtual_machine_run_command.install_vscode]
+  
+  source {
+    script = "dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart; dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart"
+  }
+  
+  tags = var.tags
+}
+
+# Install WSL2 kernel update
+resource "azurerm_virtual_machine_run_command" "install_wsl2_kernel" {
+  name               = "install-wsl2-kernel"
+  location           = azurerm_resource_group.rg.location
+  virtual_machine_id = azurerm_windows_virtual_machine.jumpbox.id
+  
+  depends_on = [azurerm_virtual_machine_run_command.enable_wsl2_features]
+  
+  source {
+    script = "Invoke-WebRequest -Uri https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi -OutFile C:\\Windows\\TEMP\\wsl_update_x64.msi; Start-Process msiexec.exe -Wait -ArgumentList '/i C:\\Windows\\TEMP\\wsl_update_x64.msi /quiet /norestart'; Remove-Item C:\\Windows\\TEMP\\wsl_update_x64.msi -ErrorAction SilentlyContinue"
+  }
+  
+  tags = var.tags
+}
+
+# Configure WSL2 and install Ubuntu
+resource "azurerm_virtual_machine_run_command" "configure_wsl2" {
+  name               = "configure-wsl2"
+  location           = azurerm_resource_group.rg.location
+  virtual_machine_id = azurerm_windows_virtual_machine.jumpbox.id
+  
+  depends_on = [azurerm_virtual_machine_run_command.install_wsl2_kernel]
+  
+  source {
+    script = "wsl --set-default-version 2; wsl --update; wsl --install -d Ubuntu-24.04 --no-launch"
+  }
+  
   tags = var.tags
 }
